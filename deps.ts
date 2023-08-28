@@ -1,0 +1,1 @@
+export * as rtmidi_bindings from "./bindings/rtmidi.ts"
