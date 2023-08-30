@@ -1,3 +1,4 @@
+/// <reference lib="deno.unstable" />
 import { rtmidi_bindings } from "./deps.ts";
 
 const rtmidi = Deno.dlopen("../build/rtmidi.dll", rtmidi_bindings).symbols;
@@ -22,24 +23,41 @@ export function get_version(): string {
  * Encapsulates all the common methods used by Input and Output.
  */
 class MidiDevice {
-  protected _device!: ArrayBuffer;
+  protected _device: Deno.PointerValue<unknown>;
   protected _port = -1;
   protected readonly _port_name: string;
 
   constructor(port_name: string, device_ptr: Deno.PointerValue) {
     this._port_name = port_name;
     if (device_ptr != null) {
-      this._device = Deno.UnsafePointerView.getArrayBuffer(device_ptr, 32, 0);
+      this._device = device_ptr;
     } else {
       throw new Error("Failed to create default midi in device");
     }
   }
 
   protected check_error(): void {
-    // Read the 17th bit of the device to check the error.
-    const error = new Uint8Array(this._device)[16];
-    console.log(error);
-    // TODO: Try to create a pointer from the address at the end of the device buffer and read the string from it.
+    if (this._device == null) {
+      throw new Error("Device is null");
+    }
+    
+    // Read the 17th byte of the device to check the error.
+    const error_ptr = Deno.UnsafePointer.offset(this._device, 16);
+    if (error_ptr == null) {
+      throw new Error("Error pointer is null");
+    }
+
+    const is_ok = new Deno.UnsafePointerView(error_ptr).getBool();
+    if (is_ok) {
+      return;
+    }
+
+    // Print the error message
+    const msg_ptr = new Deno.UnsafePointerView(this._device).getPointer(24);
+    if (msg_ptr != null) {
+      const error = Deno.UnsafePointerView.getCString(msg_ptr);
+      throw new Error(error);
+    }
   }
 
   get_port_count(): number {
@@ -63,6 +81,11 @@ class MidiDevice {
     return ports;
   }
 
+  /**
+   * @brief Open a MIDI connection given on a given port number.
+   * @param port the port number to open (from 0 to get_port_count() - 1)
+   * @throws Error if the port number is invalid.
+   */
   open_port(port: number): void {
     if (port >= this.get_port_count()) {
       throw new Error("Invalid port number");

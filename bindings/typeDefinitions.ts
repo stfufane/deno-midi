@@ -148,17 +148,17 @@ export const RtMidiWrapperT = {
 /**
  * @brief Typedef for a generic RtMidi pointer.
  */
-export const RtMidiPtrT = buf(RtMidiWrapperT);
+export const RtMidiPtrT = ptr(RtMidiWrapperT);
 
 /**
  * @brief Typedef for a generic RtMidiIn pointer.
  */
-export const RtMidiInPtrT = buf(RtMidiWrapperT);
+export const RtMidiInPtrT = ptr(RtMidiWrapperT);
 
 /**
  * @brief Typedef for a generic RtMidiOut pointer.
  */
-export const RtMidiOutPtrT = buf(RtMidiWrapperT);
+export const RtMidiOutPtrT = ptr(RtMidiWrapperT);
 
 /**
  * @brief The type of a RtMidi callback function.
