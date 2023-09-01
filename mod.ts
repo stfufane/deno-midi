@@ -19,44 +19,64 @@ export function get_version(): string {
 }
 
 /**
+ * Error handling mode.
+ */
+enum ErrorHandling {
+  Throw,
+  Log,
+  Silent
+}
+
+/**
  * Generic wrapper around a MIDI device. This class should not be used directly.
  * Encapsulates all the common methods used by Input and Output.
  */
 class MidiDevice {
-  protected _device: Deno.PointerValue<unknown>;
+  protected _device: Deno.PointerValue;
   protected _port = -1;
   protected readonly _port_name: string;
 
   constructor(port_name: string, device_ptr: Deno.PointerValue) {
     this._port_name = port_name;
-    if (device_ptr != null) {
-      this._device = device_ptr;
-    } else {
+    if (device_ptr == null) {
       throw new Error("Failed to create default midi in device");
     }
+    this._device = device_ptr;
+    this.check_error();
   }
 
-  protected check_error(): void {
-    if (this._device == null) {
-      throw new Error("Device is null");
-    }
-    
+  /**
+   * Read the device pointer to check is the last operation was successful.
+   * @param error_mode How the error message is handled
+   */
+  protected check_error(error_mode = ErrorHandling.Throw): void {   
     // Read the 17th byte of the device to check the error.
-    const error_ptr = Deno.UnsafePointer.offset(this._device, 16);
+    const error_ptr = Deno.UnsafePointer.offset(this._device!, 16);
     if (error_ptr == null) {
       throw new Error("Error pointer is null");
     }
 
-    const is_ok = new Deno.UnsafePointerView(error_ptr).getBool();
-    if (is_ok) {
+    const error_data = new Uint8Array(new Deno.UnsafePointerView(error_ptr).getArrayBuffer(1));
+    if (error_data[0] == 1) {
       return;
     }
 
-    // Print the error message
-    const msg_ptr = new Deno.UnsafePointerView(this._device).getPointer(24);
+    // The library does not reset the ok flag, so we do it here.
+    error_data[0] = 1;
+
+    // Handle the error message
+    const msg_ptr = new Deno.UnsafePointerView(this._device!).getPointer(24);
     if (msg_ptr != null) {
       const error = Deno.UnsafePointerView.getCString(msg_ptr);
+      switch (error_mode) {
+        case ErrorHandling.Throw:
       throw new Error(error);
+        case ErrorHandling.Log:
+          console.error(error);
+          break;
+        case ErrorHandling.Silent:
+          break;
+      }
     }
   }
 
@@ -129,5 +149,6 @@ export class MidiOutput extends MidiDevice {
    */
   send_message(message: Uint8Array): void {
     rtmidi.rtmidi_out_send_message(this._device, message, message.length);
+    this.check_error(ErrorHandling.Log);
   }
 }
