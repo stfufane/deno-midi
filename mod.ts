@@ -2,7 +2,21 @@
 import * as rtmidi_bindings from "./bindings/rtmidi.ts";
 import { RtMidiCCallbackCallbackDefinition } from "./bindings/typeDefinitions.ts";
 
-const rtmidi = Deno.dlopen("../build/rtmidi.dll", rtmidi_bindings).symbols;
+// Determine library extension based on the user's OS.
+let libSuffix = "";
+switch (Deno.build.os) {
+  case "windows":
+    libSuffix = "dll";
+    break;
+  case "darwin":
+    libSuffix = "dylib";
+    break;
+  default:
+    libSuffix = "so";
+    break;
+}
+
+const rtmidi = Deno.dlopen(`./vendor/rtmidi.${libSuffix}`, rtmidi_bindings).symbols;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
@@ -150,6 +164,12 @@ abstract class MidiDevice {
   }
 }
 
+/**
+ * Wrapper around a MIDI input device.
+ * Allows to receive MIDI messages from a MIDI input device.
+ * @extends MidiDevice
+ * @see MidiDevice
+ */
 export class MidiInput extends MidiDevice {
   private _callback:
     | Deno.UnsafeCallback<typeof RtMidiCCallbackCallbackDefinition>
@@ -160,6 +180,9 @@ export class MidiInput extends MidiDevice {
     super("Deno Midi In Port", midi_in);
   }
 
+  /**
+   * Free the device pointer.
+   */
   free_device(): void {
     rtmidi.rtmidi_in_free(this._device);
   }
@@ -211,12 +234,21 @@ export class MidiInput extends MidiDevice {
   }
 }
 
+/**
+ * Wrapper around a MIDI output device.
+ * Allows to send MIDI messages to a MIDI output device.
+ * @extends MidiDevice
+ * @see MidiDevice
+ */
 export class MidiOutput extends MidiDevice {
   constructor() {
     const midi_out = rtmidi.rtmidi_out_create_default();
     super("Deno Midi Out Port", midi_out);
   }
 
+  /**
+   * Free the device pointer.
+   */
   free_device(): void {
     rtmidi.rtmidi_out_free(this._device);
   }
