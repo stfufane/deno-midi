@@ -1,22 +1,33 @@
 /// <reference lib="deno.unstable" />
+import {
+  dirname,
+  fromFileUrl,
+} from "https://deno.land/std@0.201.0/path/mod.ts";
 import * as rtmidi_bindings from "./bindings/rtmidi.ts";
 import { RtMidiCCallbackCallbackDefinition } from "./bindings/typeDefinitions.ts";
 
 // Determine library extension based on the user's OS.
-let libSuffix = "";
+let lib_suffix = "";
 switch (Deno.build.os) {
   case "windows":
-    libSuffix = "dll";
+    lib_suffix = "dll";
     break;
   case "darwin":
-    libSuffix = "dylib";
+    lib_suffix = "dylib";
     break;
   default:
-    libSuffix = "so";
+    lib_suffix = "so";
     break;
 }
 
-const rtmidi = Deno.dlopen(`./vendor/rtmidi.${libSuffix}`, rtmidi_bindings).symbols;
+const module_url = new URL(import.meta.url);
+let lib_prefix = ".";
+if (module_url.protocol === "file:") {
+  lib_prefix = dirname(fromFileUrl(import.meta.url));
+}
+const rtmidi =
+  Deno.dlopen(`${lib_prefix}/vendor/rtmidi.${lib_suffix}`, rtmidi_bindings)
+    .symbols;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
