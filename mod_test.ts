@@ -1,9 +1,9 @@
 import { assertEquals } from "https://deno.land/std@0.201.0/assert/mod.ts";
 import { assert } from "https://deno.land/std@0.201.0/assert/assert.ts";
-import { get_version, MidiInput, MidiOutput } from "./mod.ts";
+import { getVersion, MidiInput, MidiOutput } from "./mod.ts";
 
 Deno.test({ name: "get_version", permissions: { ffi: true } }, () => {
-  assertEquals(get_version(), "6.0.0");
+  assertEquals(getVersion(), "6.0.0");
 });
 
 Deno.test(
@@ -22,5 +22,5 @@ Deno.test(
 
 Deno.test({ name: "get_ports", permissions: { ffi: true } }, () => {
   const midi_out = new MidiOutput();
-  assert(midi_out.get_ports());
+  assert(midi_out.getPorts());
 });

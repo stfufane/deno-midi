@@ -8,15 +8,10 @@ export const _Bool = "bool" as const;
  * `const char *`, C string
  */
 export const cstringT = "buffer" as const;
-
 export const unsignedInt = "u32" as const;
-
 export const double = "f64" as const;
-
 export const unsignedChar = "u8" as const;
-
 export const int = "i32" as const;
-
 export const size_t = "usize" as const;
 
 /**
@@ -163,16 +158,14 @@ export const RtMidiOutPtrT = ptr(RtMidiWrapperT);
 /**
  * @brief The type of a RtMidi callback function.
  *
- * @param timeStamp   The time at which the message has been received.
- *
+ * @param deltaTime   The time at which the message has been received.
  * @param message     The midi message.
- *
  * @param userData    Additional user data for the callback.
  * See {@linkcode RtMidiIn::RtMidiCallback}.
  */
 export const RtMidiCCallbackCallbackDefinition = {
   parameters: [
-    double, // timeStamp
+    double, // deltaTime
     buf(unsignedChar), // message
     size_t, // messageSize
     ptr("void"), // userData
@@ -182,10 +175,8 @@ export const RtMidiCCallbackCallbackDefinition = {
 /**
  * @brief The type of a RtMidi callback function.
  *
- * @param timeStamp   The time at which the message has been received.
- *
+ * @param deltaTime   The time at which the message has been received.
  * @param message     The midi message.
- *
  * @param userData    Additional user data for the callback.
  * See {@linkcode RtMidiIn::RtMidiCallback}.
  */
