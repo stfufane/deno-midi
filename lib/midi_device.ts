@@ -1,11 +1,13 @@
 /// <reference lib="deno.unstable" />
 
+import { dlopen } from "https://deno.land/x/plug@1.0.2/mod.ts";
 import * as rtmidi_bindings from "./bindings/rtmidi.ts";
 import { RtMidiCCallbackCallbackDefinition } from "./bindings/typeDefinitions.ts";
-import { ErrorHandling, getLibPath } from "./utils.ts";
+import { ErrorHandling, getLibUrl } from "./utils.ts";
 
-const rtmidi = Deno.dlopen(getLibPath(), rtmidi_bindings)
-  .symbols;
+const lib = await dlopen({ name: "rtmidi", url: getLibUrl() }, rtmidi_bindings);
+
+const rtmidi = lib.symbols;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
