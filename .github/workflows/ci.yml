@@ -1,0 +1,77 @@
+name: Build RtMidi
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:    
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            api: "-DRTMIDI_API_JACK=ON -DRTMIDI_API_ALSA=ON"
+          - os: macos-latest
+            cmakeArch: "-DCMAKE_OSX_ARCHITECTURES='x86_64;arm64'"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Install dependencies (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt update
+          sudo apt install libjack-dev libasound-dev
+
+      - name: Checkout RtMidi
+        uses: actions/checkout@v3
+        with:
+          repository: stfufane/rtmidi
+          fetch-depth: 0
+          ref: error-handling
+
+      - name: Get latest CMake and Ninja
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: latestrc
+          ninjaVersion: latest
+
+      - name: Build RtMidi
+        run: |
+          mkdir build && cd build
+          cmake .. -G "Ninja" -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ${{ matrix.api }} ${{ matrix.cmakeArch }}
+          cmake --build . --config Release --target rtmidi
+
+      - name: Strip library (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          strip -x build/librtmidi.dylib
+        
+      - name: Strip library (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          strip -x build/librtmidi.so
+        
+      - name: Strip library (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          strip -x build/RtMidi.dll
+        
+      - name: Prepare release
+        run: |
+          echo ${{ github.sha }} > release.txt
+
+      - name: Release (on tags only)
+        uses: softprops/action-gh-release@master
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          draft: true
+          files: |
+            release.txt
+            LICENSE
+            build/RtMidi.dll
+            build/librtmidi.so
+            build/librtmidi.dylib
