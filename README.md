@@ -18,7 +18,7 @@ generator. He's also the author of the
 ### Midi Input
 
 ```ts
-import { MidiInput } from "https://deno.land/x/deno-midi/mod.ts";
+import { MidiInput } from "https://deno.land/x/deno_midi/mod.ts";
 
 const midi_in = new MidiInput();
 // List the available ports.
@@ -41,7 +41,7 @@ midi_in.freeDevice();
 The API is very similar, except you can send MIDI messages.
 
 ```ts
-import { MidiOutput } from "https://deno.land/x/deno-midi/mod.ts";
+import { MidiOutput } from "https://deno.land/x/deno_midi/mod.ts";
 
 const midi_out = new MidiOutput();
 console.log(midi_out.getPorts());
