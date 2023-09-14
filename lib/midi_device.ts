@@ -51,25 +51,26 @@ abstract class MidiDevice {
    */
   protected checkError(error_mode = ErrorHandling.Throw): void {
     // Read the 17th byte of the device to check the error.
-    const error_ptr = Deno.UnsafePointer.offset(this.device!, 16);
-    if (error_ptr == null) {
+    const ok_ptr = Deno.UnsafePointer.offset(this.device!, 16);
+    if (ok_ptr == null) {
       throw new Error("Error pointer is null");
     }
 
-    const error_data = new Uint8Array(
-      new Deno.UnsafePointerView(error_ptr).getArrayBuffer(1),
+    const ok_data = new Uint8Array(
+      new Deno.UnsafePointerView(ok_ptr).getArrayBuffer(1),
     );
-    if (error_data[0] == 1) {
+    if (ok_data[0] == 1) {
       return;
     }
 
-    // The library does not reset the ok flag, so we do it here.
-    error_data[0] = 1;
-
-    // Handle the error message
+    // Retrieve the error message
     const msg_ptr = new Deno.UnsafePointerView(this.device!).getPointer(24);
     if (msg_ptr != null) {
       const error = Deno.UnsafePointerView.getCString(msg_ptr);
+      // Clear the error message pointer for next calls.
+      rtmidi.rtmidi_clear_error(this.device);
+
+      // Handle the error according to the error mode.
       switch (error_mode) {
         case ErrorHandling.Throw:
           throw new Error(error);
@@ -79,12 +80,6 @@ abstract class MidiDevice {
         case ErrorHandling.Silent:
           break;
       }
-
-      // Reset the message as well.
-      const msg_data = new Uint8Array(
-        new Deno.UnsafePointerView(msg_ptr).getArrayBuffer(1),
-      );
-      msg_data[0] = "\0".charCodeAt(0);
     }
   }
 

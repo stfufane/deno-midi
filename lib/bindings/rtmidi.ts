@@ -97,6 +97,17 @@ export const rtmidi_error = {
 } as const;
 
 /**
+ * @brief Resets the ok flag and frees the error message.
+ *
+ */
+export const rtmidi_clear_error = {
+  parameters: [
+    RtMidiPtrT, // device
+  ],
+  result: "void",
+} as const;
+
+/**
  * @brief Open a MIDI port.
  *
  * @param port      Must be greater than 0
