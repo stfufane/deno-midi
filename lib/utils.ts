@@ -1,32 +1,24 @@
-import {
-  dirname,
-  fromFileUrl,
-} from "https://deno.land/std@0.201.0/path/mod.ts";
+import config from "../deno.json" assert { type: "json" };
 
 /**
  * @returns The path to the RtMidi library according to the OS.
  */
 export function getLibPath(): string {
-  // Determine library extension based on the user's OS.
-  let lib_suffix = "";
+  // Determine library file based on the user's OS.
+  let lib = "";
   switch (Deno.build.os) {
     case "windows":
-      lib_suffix = "dll";
+      lib = "RtMidi.dll";
       break;
     case "darwin":
-      lib_suffix = "dylib";
+      lib = "librtmidi.dylib";
       break;
     default:
-      lib_suffix = "so";
+      lib = "librtmidi.so";
       break;
   }
 
-  const module_url = new URL(import.meta.url);
-  let lib_prefix = ".";
-  if (module_url.protocol === "file:") {
-    lib_prefix = dirname(fromFileUrl(import.meta.url));
-  }
-  return `${lib_prefix}/vendor/rtmidi.${lib_suffix}`;
+  return `${config.github}/releases/download/v${config.version}/${lib}`;
 }
 
 /**
