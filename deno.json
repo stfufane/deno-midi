@@ -3,6 +3,6 @@
   "github": "https://github.com/stfufane/deno-midi",
   "version": "0.0.1",
   "tasks": {
-    "dev": "deno run --allow-ffi --unstable example/main.ts"
+    "dev": "deno run -A --unstable example/main.ts"
   }
 }

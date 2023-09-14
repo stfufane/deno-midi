@@ -4,7 +4,8 @@ A Deno wrapper for the [RtMidi](https://github.com/thestk/rtmidi) C++ library
 that provides realtime MIDI I/O.
 
 It uses pre-built binaries of the 6.0.0 version of the library for Windows,
-Linux and MacOS (x64 and arm64), so no need to install any dependencies.
+Linux and MacOS (x64 and arm64), so no need to install any dependencies. They're
+built from my fork of the RtMidi library that adds some extra features.
 
 It uses Deno FFI to call the C++ library. The bindings have been generated
 thanks to the great help from [Aapo Alasuutari](https://github.com/aapoalas) and
