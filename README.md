@@ -1,6 +1,9 @@
 # deno_midi
 
-A Deno wrapper for the [RtMidi](https://github.com/thestk/rtmidi) C++ library
+⚠️ This is a work in progress and may be subject to breaking changes until it
+hits 1.0. ⚠️
+
+A Deno wrapper for the [RtMidi](https://github.com/thestk/rtmidi) C++ library⚠️
 that provides realtime MIDI I/O.
 
 It uses pre-built binaries of the 6.0.0 version of the library for Windows,
@@ -15,12 +18,22 @@ generator. He's also the author of the
 
 ## Usage
 
+Since it uses FFI, it should be run with the `--unstable` flag.
+
+### Basic check
+
+```ts
+import { midi } from "https://deno.land/x/deno_midi/mod.ts";
+
+console.log(midi.getVersion()); // Should print 6.0.0
+```
+
 ### Midi Input
 
 ```ts
-import { MidiInput } from "https://deno.land/x/deno_midi/mod.ts";
+import { midi } from "https://deno.land/x/deno_midi/mod.ts";
 
-const midi_in = new MidiInput();
+const midi_in = new midi.Input();
 // List the available ports.
 console.log(midi_in.getPorts());
 midi_in.openPort(0); // Open the first available port.
@@ -41,18 +54,18 @@ midi_in.freeDevice();
 The API is very similar, except you can send MIDI messages.
 
 ```ts
-import { MidiOutput } from "https://deno.land/x/deno_midi/mod.ts";
+import { midi } from "https://deno.land/x/deno_midi/mod.ts";
 
-const midi_out = new MidiOutput();
+const midi_out = new midi.Output();
 console.log(midi_out.getPorts());
 
 midi_out.openPort(0);
 
 // Send a note on.
-midi_out.sendMessage([0x90, 0x3C, 0x7F]);
+midi_out.sendRawMessage([0x90, 0x3C, 0x7F]);
 // Send a note off after 1 second.
 setTimeout(() => {
-  midi_out.sendMessage([0x80, 0x3C, 0x2F]);
+  midi_out.sendRawMessage([0x80, 0x3C, 0x2F]);
 }, 1000);
 ```
 

@@ -98,7 +98,6 @@ export const rtmidi_error = {
 
 /**
  * @brief Resets the ok flag and frees the error message.
- *
  */
 export const rtmidi_clear_error = {
   parameters: [

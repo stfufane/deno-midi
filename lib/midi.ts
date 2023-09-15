@@ -4,6 +4,10 @@ import { dlopen } from "https://deno.land/x/plug@1.0.2/mod.ts";
 import * as rtmidi_bindings from "./bindings/rtmidi.ts";
 import { RtMidiCCallbackCallbackDefinition } from "./bindings/typeDefinitions.ts";
 import { ErrorHandling, getLibUrl, InputCallbackParams } from "./utils.ts";
+import { Message } from "./messages.ts";
+
+// Export the extra types.
+export * from "./messages.ts";
 
 const lib = await dlopen({ name: "rtmidi", url: getLibUrl() }, rtmidi_bindings);
 
@@ -28,7 +32,7 @@ export function getVersion(): string {
  * @abstract Generic wrapper around a MIDI device.
  * Encapsulates all the common methods used by Input and Output.
  */
-abstract class MidiDevice {
+abstract class Device {
   protected device: Deno.PointerValue;
   protected port = -1;
   protected readonly port_name: string;
@@ -144,10 +148,10 @@ abstract class MidiDevice {
 /**
  * Wrapper around a MIDI input device.
  * Allows to receive MIDI messages from a MIDI input device.
- * @extends MidiDevice
- * @see MidiDevice
+ * @extends Device
+ * @see Device
  */
-export class MidiInput extends MidiDevice {
+export class Input extends Device {
   private callback:
     | Deno.UnsafeCallback<typeof RtMidiCCallbackCallbackDefinition>
     | null = null;
@@ -193,7 +197,7 @@ export class MidiInput extends MidiDevice {
         );
         callback({
           message: Array.from(msg_data),
-          deltaTime: deltaTime
+          deltaTime: deltaTime,
         });
       },
     );
@@ -217,10 +221,10 @@ export class MidiInput extends MidiDevice {
 /**
  * Wrapper around a MIDI output device.
  * Allows to send MIDI messages to a MIDI output device.
- * @extends MidiDevice
- * @see MidiDevice
+ * @extends Device
+ * @see Device
  */
-export class MidiOutput extends MidiDevice {
+export class Output extends Device {
   constructor() {
     const midi_out = rtmidi.rtmidi_out_create_default();
     super("Deno Midi Out Port", midi_out);
@@ -233,17 +237,26 @@ export class MidiOutput extends MidiDevice {
     rtmidi.rtmidi_out_free(this.device);
   }
 
+  sendMessage<T, M extends Message<T>>(m: M): void {
+    rtmidi.rtmidi_out_send_message(
+      this.device,
+      new Uint8Array(m.getMessage()),
+      m.length,
+    );
+    this.checkError(ErrorHandling.Log);
+  }
+
   /**
    * Immediately send a single message out an open MIDI output port.
    * @param message an array of bytes describing the MIDI message
    * @example
    * ```ts
    * // Send a middle C note on MIDI channel 1
-   * midi_out.sendMessage([0x90, 0x3C, 0x7F]);
-   * midi_out.sendMessage([0x80, 0x3C, 0x2F]);
+   * midi_out.sendRawMessage([0x90, 0x3C, 0x7F]);
+   * midi_out.sendRawMessage([0x80, 0x3C, 0x2F]);
    * ```
    */
-  sendMessage(message: number[]): void {
+  sendRawMessage(message: number[]): void {
     rtmidi.rtmidi_out_send_message(
       this.device,
       new Uint8Array(message),

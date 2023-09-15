@@ -11,8 +11,7 @@ export function getLibUrl(): string {
  * Parameters passed to the callback function when a message is received.
  * The deltaTime parameter is optional to avoid unnecessary verbosity when using the callback.
  */
-export interface InputCallbackParams
-{
+export interface InputCallbackParams {
   message: number[];
   deltaTime?: number;
 }

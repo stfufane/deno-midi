@@ -1,1 +1,1 @@
-export * from "./lib/midi_device.ts";
+export * as midi from "./lib/midi.ts";

@@ -1,28 +1,28 @@
-import { getVersion, MidiInput, MidiOutput } from "../mod.ts";
+import { midi } from "../mod.ts";
 
-console.log(getVersion());
+console.log(midi.getVersion());
 
-const midi_in = new MidiInput();
-const midi_out = new MidiOutput();
+const midi_in = new midi.Input();
+const midi_out = new midi.Output();
 
 console.log("out ports : ", midi_out.getPorts());
 
-midi_out.openPort(1);
+midi_out.openPort(0);
 
-// Send a note on.
-midi_out.sendMessage([0x90, 0x3C, 0x7F]);
+// Send a note on message on channel 1 (default channel).
+midi_out.sendMessage(new midi.NoteOn({ note: 0x3C, velocity: 0x7F }));
 // Send a note off after 1 second.
 setTimeout(() => {
-  midi_out.sendMessage([0x80, 0x3C, 0x2F]);
+  midi_out.sendMessage(new midi.NoteOff({ note: 0x3C, velocity: 0x7F }));
 }, 1000);
 
 console.log("in ports : ", midi_in.getPorts());
 
 midi_in.openPort(0);
 // Route incoming midi messages to the output device.
-midi_in.onMessage(({ message }) => {
-  console.log(message);
-  midi_out.sendMessage(message);
+midi_in.onMessage(({ message, deltaTime }) => {
+  console.log(message, deltaTime);
+  midi_out.sendRawMessage(message);
 });
 
 // Cancel the callback and close the device after 10 seconds.
