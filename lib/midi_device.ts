@@ -3,7 +3,7 @@
 import { dlopen } from "https://deno.land/x/plug@1.0.2/mod.ts";
 import * as rtmidi_bindings from "./bindings/rtmidi.ts";
 import { RtMidiCCallbackCallbackDefinition } from "./bindings/typeDefinitions.ts";
-import { ErrorHandling, getLibUrl } from "./utils.ts";
+import { ErrorHandling, getLibUrl, InputCallbackParams } from "./utils.ts";
 
 const lib = await dlopen({ name: "rtmidi", url: getLibUrl() }, rtmidi_bindings);
 
@@ -170,14 +170,14 @@ export class MidiInput extends MidiDevice {
    * @param callback the function to be called when a message is received.
    * @example
    * ```ts
-   * midi_in.onMessage((deltaTime: number, message: number[]) => {
-   *    console.log(deltaTime, message);
+   * midi_in.onMessage(({ message, deltaTime }) => {
+   *    console.log(message, deltaTime);
    * });
    * ```
    * @throws Error if the callback could not be set.
    * @see offMessage to remove the callback.
    */
-  onMessage(callback: (deltaTime: number, message: number[]) => void): void {
+  onMessage(callback: (params: InputCallbackParams) => void): void {
     this.callback = Deno.UnsafeCallback.threadSafe(
       RtMidiCCallbackCallbackDefinition,
       (
@@ -191,7 +191,10 @@ export class MidiInput extends MidiDevice {
             messageSize as number,
           ),
         );
-        callback(deltaTime, Array.from(msg_data));
+        callback({
+          message: Array.from(msg_data),
+          deltaTime: deltaTime
+        });
       },
     );
     rtmidi.rtmidi_in_set_callback(this.device, this.callback!.pointer, null);

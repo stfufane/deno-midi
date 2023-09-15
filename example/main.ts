@@ -20,8 +20,8 @@ console.log("in ports : ", midi_in.getPorts());
 
 midi_in.openPort(0);
 // Route incoming midi messages to the output device.
-midi_in.onMessage((timestamp: number, message: number[]) => {
-  console.log(timestamp, message);
+midi_in.onMessage(({ message }) => {
+  console.log(message);
   midi_out.sendMessage(message);
 });
 

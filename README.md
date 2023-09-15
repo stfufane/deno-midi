@@ -1,4 +1,4 @@
-# deno-midi
+# deno_midi
 
 A Deno wrapper for the [RtMidi](https://github.com/thestk/rtmidi) C++ library
 that provides realtime MIDI I/O.
@@ -25,7 +25,7 @@ const midi_in = new MidiInput();
 console.log(midi_in.getPorts());
 midi_in.openPort(0); // Open the first available port.
 // Set a callback to receive the messages. It keeps the program alive.
-midi_in.onMessage((deltaTime, message) => {
+midi_in.onMessage(({ deltaTime, message }) => {
   console.log(`Message received at ${deltaTime} : ${message}`);
 });
 // Stop the callback when you're done.
