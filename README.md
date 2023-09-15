@@ -3,7 +3,7 @@
 ⚠️ This is a work in progress and may be subject to breaking changes until it
 hits 1.0. ⚠️
 
-A Deno wrapper for the [RtMidi](https://github.com/thestk/rtmidi) C++ library⚠️
+A Deno wrapper for the [RtMidi](https://github.com/thestk/rtmidi) C++ library
 that provides realtime MIDI I/O.
 
 It uses pre-built binaries of the 6.0.0 version of the library for Windows,

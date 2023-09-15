@@ -3,7 +3,7 @@
 import { dlopen } from "https://deno.land/x/plug@1.0.2/mod.ts";
 import * as rtmidi_bindings from "./bindings/rtmidi.ts";
 import { RtMidiCCallbackCallbackDefinition } from "./bindings/typeDefinitions.ts";
-import { ErrorHandling, getLibUrl, InputCallbackParams } from "./utils.ts";
+import { ErrorHandling, getLibUrl, InputCallbackParams, IgnoreTypeOptions } from "./utils.ts";
 import { Message } from "./messages.ts";
 
 // Export the extra types.
@@ -166,6 +166,15 @@ export class Input extends Device {
    */
   freeDevice(): void {
     rtmidi.rtmidi_in_free(this.device);
+  }
+
+  /**
+   * Ignore incoming MIDI messages of a given type.
+   * @param options the types of messages to ignore (sysex, timing, activeSensing)
+   */
+  ignoreTypes(options: IgnoreTypeOptions) : void {
+    rtmidi.rtmidi_in_ignore_types(this.device, options.sysex || false, options.timing || false, options.activeSensing || false);
+    this.checkError();
   }
 
   /**

@@ -17,6 +17,15 @@ export interface InputCallbackParams {
 }
 
 /**
+ * Parameters to ignore some of the message types.
+ */
+export interface IgnoreTypeOptions {
+  sysex?: boolean,
+  timing?: boolean,
+  activeSensing?: boolean
+}
+
+/**
  * Error handling mode.
  */
 export enum ErrorHandling {
