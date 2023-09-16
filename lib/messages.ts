@@ -99,3 +99,64 @@ export class NoteOff extends Message<NoteParams> {
     ];
   }
 }
+
+/**
+ * Control Change params
+ */
+interface CCParams {
+  channel?: number; // Defaults to 1.
+  controller: number;
+  value: number;
+}
+
+/**
+ * Control Change MIDI message.
+ * @example
+ * ```ts
+ * // Send a control change message on channel 3 with controller 0x7B and value 0x7F.
+ * midi_out.sendMessage(new ControlChange({ channel: 3, controller: 0x7B, value: 0x7F }));
+ * ```
+ * @see https://www.midi.org/specifications-old/item/table-3-control-change-messages-data-bytes-2
+ */
+export class ControlChange extends Message<CCParams> {
+  constructor(params: CCParams) {
+    super(MessageType.ControlChange, 3, params);
+  }
+
+  getMessage(): number[] {
+    return [
+      this.type | ((this.params.channel || 1) - 1),
+      this.params.controller,
+      this.params.value,
+    ];
+  }
+}
+
+/**
+ * Program Change params
+ */
+interface PCParams {
+  channel?: number; // Defaults to 1.
+  program: number;
+}
+
+/**
+ * Program Change MIDI message.
+ * @example
+ * ```ts
+ * // Send a program change message on channel 3 with program 0x20.
+ * midi_out.sendMessage(new ProgramChange({ channel: 3, program: 0x20 }));
+ * ```
+ */
+export class ProgramChange extends Message<PCParams> {
+  constructor(params: PCParams) {
+    super(MessageType.ProgramChange, 2, params);
+  }
+
+  getMessage(): number[] {
+    return [
+      this.type | ((this.params.channel || 1) - 1),
+      this.params.program,
+    ];
+  }
+}

@@ -16,6 +16,11 @@ setTimeout(() => {
   midi_out.sendMessage(new midi.NoteOff({ note: 0x3C, velocity: 0x7F }));
 }, 1000);
 
+// Send a control change
+midi_out.sendMessage(new midi.ControlChange({ controller: 0x7B, value: 0x7F }));
+// Send a program change
+midi_out.sendMessage(new midi.ProgramChange({ program: 0x01 }));
+
 console.log("in ports : ", midi_in.getPorts());
 
 // Tells the library to ignore sysex and active sensing messages.
