@@ -1,7 +1,7 @@
 {
   "name": "deno-midi",
   "github": "https://github.com/stfufane/deno-midi",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "tasks": {
     "dev": "deno run -A --unstable example/main.ts"
   }

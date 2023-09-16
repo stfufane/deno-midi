@@ -246,26 +246,31 @@ export class Output extends Device {
     rtmidi.rtmidi_out_free(this.device);
   }
 
-  sendMessage<T, M extends Message<T>>(m: M): void {
-    rtmidi.rtmidi_out_send_message(
-      this.device,
-      new Uint8Array(m.getMessage()),
-      m.length,
-    );
-    this.checkError(ErrorHandling.Log);
-  }
-
   /**
    * Immediately send a single message out an open MIDI output port.
    * @param message an array of bytes describing the MIDI message
    * @example
    * ```ts
-   * // Send a middle C note on MIDI channel 1
-   * midi_out.sendRawMessage([0x90, 0x3C, 0x7F]);
-   * midi_out.sendRawMessage([0x80, 0x3C, 0x2F]);
+   * // Send a middle C note on MIDI channel 1 with a Message object
+   * midi_out.sendMessage(new midi.NoteOn({ note: 0x3C, velocity: 0x7F }));
+   * midi_out.sendMessage(new midi.NoteOff({ note: 0x3C, velocity: 0x7F }));
+   * // Or as a raw array of bytes
+   * midi_out.sendMessage([0x90, 0x3C, 0x7F]);
+   * midi_out.sendMessage([0x80, 0x3C, 0x2F]);
    * ```
    */
-  sendRawMessage(message: number[]): void {
+  sendMessage<T, M extends Message<T>>(m: M | number[]): void {
+    if (m instanceof Message) {
+      this.sendRawMessage(m.getMessage());
+    } else {
+      this.sendRawMessage(m);
+    }
+  }
+
+  /**
+   * Internal method to send a MIDI message.
+   */
+  private sendRawMessage(message: number[]): void {
     rtmidi.rtmidi_out_send_message(
       this.device,
       new Uint8Array(message),

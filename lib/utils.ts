@@ -20,9 +20,9 @@ export interface InputCallbackParams {
  * Parameters to ignore some of the message types.
  */
 export interface IgnoreTypeOptions {
-  sysex?: boolean,
-  timing?: boolean,
-  activeSensing?: boolean
+  sysex?: boolean;
+  timing?: boolean;
+  activeSensing?: boolean;
 }
 
 /**

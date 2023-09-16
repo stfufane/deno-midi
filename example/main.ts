@@ -25,7 +25,7 @@ midi_in.openPort(0);
 // Route incoming midi messages to the output device.
 midi_in.onMessage(({ message, deltaTime }) => {
   console.log(message, deltaTime);
-  midi_out.sendRawMessage(message);
+  midi_out.sendMessage(message);
 });
 
 // Cancel the callback and close the device after 10 seconds.
