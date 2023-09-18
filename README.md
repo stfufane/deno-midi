@@ -72,4 +72,4 @@ setTimeout(() => {
 }, 1000);
 ```
 
-A complete example can be found in the example folder.
+Complete examples can be found in the examples folder.
