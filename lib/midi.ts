@@ -139,6 +139,25 @@ abstract class Device {
     this.checkError();
   }
 
+  /**
+   * Opens a virtual MIDI port to allow software to software connections.
+   * @summary This method is not supported on Windows.
+   */
+  openVirtualPort(): void {
+    if (Deno.build.os == "windows") {
+      throw new Error("Virtual ports are not supported on Windows");
+    }
+
+    rtmidi.rtmidi_open_virtual_port(
+      this.device,
+      encoder.encode("Virtual " + this.port_name + "\0")
+    );
+    this.checkError();
+  }
+
+  /**
+   * Close the current port.
+   */
   closePort(): void {
     rtmidi.rtmidi_close_port(this.device);
     this.checkError();
