@@ -3,8 +3,13 @@
 import { dlopen } from "https://deno.land/x/plug@1.0.2/mod.ts";
 import * as rtmidi_bindings from "./bindings/rtmidi.ts";
 import { RtMidiCCallbackCallbackDefinition } from "./bindings/typeDefinitions.ts";
-import { ErrorHandling, getLibUrl, InputCallbackParams, IgnoreTypeOptions } from "./utils.ts";
-import { Message } from "./messages.ts";
+import {
+  ErrorHandling,
+  getLibUrl,
+  IgnoreTypeOptions,
+  InputCallbackParams,
+} from "./utils.ts";
+import { decodeMessage, Message, MessageData } from "./messages.ts";
 
 // Export the extra types.
 export * from "./messages.ts";
@@ -150,7 +155,7 @@ abstract class Device {
 
     rtmidi.rtmidi_open_virtual_port(
       this.device,
-      encoder.encode("Virtual " + this.port_name + "\0")
+      encoder.encode("Virtual " + this.port_name + "\0"),
     );
     this.checkError();
   }
@@ -191,8 +196,13 @@ export class Input extends Device {
    * Ignore incoming MIDI messages of a given type.
    * @param options the types of messages to ignore (sysex, timing, activeSensing)
    */
-  ignoreTypes(options: IgnoreTypeOptions) : void {
-    rtmidi.rtmidi_in_ignore_types(this.device, options.sysex || false, options.timing || false, options.activeSensing || false);
+  ignoreTypes(options: IgnoreTypeOptions): void {
+    rtmidi.rtmidi_in_ignore_types(
+      this.device,
+      options.sysex || false,
+      options.timing || false,
+      options.activeSensing || false,
+    );
     this.checkError();
   }
 
@@ -209,7 +219,9 @@ export class Input extends Device {
    * @throws Error if the callback could not be set.
    * @see offMessage to remove the callback.
    */
-  onMessage(callback: (params: InputCallbackParams) => void): void {
+  onMessage(
+    callback: (params: InputCallbackParams) => void,
+  ): void {
     this.callback = Deno.UnsafeCallback.threadSafe(
       RtMidiCCallbackCallbackDefinition,
       (
@@ -223,10 +235,13 @@ export class Input extends Device {
             messageSize as number,
           ),
         );
-        callback({
-          message: Array.from(msg_data),
-          deltaTime: deltaTime,
-        });
+        const msg = Array.from(msg_data);
+        callback(
+          {
+            message: decodeMessage(msg),
+            deltaTime: deltaTime,
+          },
+        );
       },
     );
     rtmidi.rtmidi_in_set_callback(this.device, this.callback!.pointer, null);
@@ -278,7 +293,9 @@ export class Output extends Device {
    * midi_out.sendMessage([0x80, 0x3C, 0x2F]);
    * ```
    */
-  sendMessage<T, M extends Message<T>>(m: M | number[]): void {
+  sendMessage<T extends MessageData, M extends Message<T>>(
+    m: M | number[],
+  ): void {
     if (m instanceof Message) {
       this.sendRawMessage(m.getMessage());
     } else {

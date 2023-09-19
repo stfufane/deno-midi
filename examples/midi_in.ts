@@ -7,10 +7,12 @@ console.log("in ports : ", midi_in.getPorts());
 // Tells the library to ignore sysex and active sensing messages.
 midi_in.ignoreTypes({ sysex: true, activeSensing: true });
 
-midi_in.openPort(0);
-// Route incoming midi messages to the output device.
-midi_in.onMessage(({ message, deltaTime }) => {
-  console.log(message, deltaTime);
+midi_in.openPort(1);
+
+// Set a callback to be called when a message is received.
+midi_in.onMessage(({ message }) => {
+  console.log(midi.MessageType[message.type]);
+  console.log(message.data);
 });
 
 // Cancel the callback and close the device after 10 seconds.

@@ -23,21 +23,61 @@ export enum MessageType {
 }
 
 /**
+ * Decode a MIDI message from an array of bytes.
+ * @param message an array of bytes describing the MIDI message
+ * @returns the decoded MIDI message.
+ */
+export function decodeMessage(message: number[]): Message<MessageData> {
+  const type = message[0] & 0xF0;
+  const channel = (message[0] & 0x0F) + 1;
+  switch (type) {
+    case MessageType.NoteOn:
+      return new NoteOn({ channel, note: message[1], velocity: message[2] });
+    case MessageType.NoteOff:
+      return new NoteOff({ channel, note: message[1], velocity: message[2] });
+    case MessageType.ControlChange:
+      return new ControlChange({
+        channel,
+        controller: message[1],
+        value: message[2],
+      });
+    case MessageType.ProgramChange:
+      return new ProgramChange({ channel, program: message[1] });
+    default:
+      throw new Error(`Unsupported message type: ${type}`);
+  }
+}
+
+/**
+ * Base interface for MIDI message data.
+ */
+// deno-lint-ignore no-empty-interface
+export interface MessageData {}
+
+/**
  * Base class for MIDI messages.
- * @template Params the type of params expected to build a message.
+ * @template Data the type of data expected to build a message.
  * @property type the type of the message.
  * @property length the length of the message.
- * @property params the params used to build the message.
+ * @property data the data used to build the message.
  */
-export abstract class Message<Params> {
+export abstract class Message<Data extends MessageData> {
   type: MessageType;
   length: number;
-  params: Params;
+  data: Data;
 
-  constructor(type: MessageType, length: number, params: Params) {
+  constructor(type: MessageType, length: number, data: Data) {
     this.type = type;
     this.length = length;
-    this.params = params;
+    this.data = data;
+  }
+
+  isNoteOn(): boolean {
+    return this.type === MessageType.NoteOn;
+  }
+
+  isNoteOff(): boolean {
+    return this.type === MessageType.NoteOff;
   }
 
   /**
@@ -48,9 +88,9 @@ export abstract class Message<Params> {
 }
 
 /**
- * NoteOn and NoteOff message params.
+ * NoteOn and NoteOff message data.
  */
-interface NoteParams {
+interface NoteData extends MessageData {
   channel?: number; // Defaults to 1.
   note: number;
   velocity: number;
@@ -64,16 +104,16 @@ interface NoteParams {
  * midi_out.sendMessage(new NoteOn({ channel: 3, note: 0x3C, velocity: 0x7F }));
  * ```
  */
-export class NoteOn extends Message<NoteParams> {
-  constructor(params: NoteParams) {
-    super(MessageType.NoteOn, 3, params);
+export class NoteOn extends Message<NoteData> {
+  constructor(data: NoteData) {
+    super(MessageType.NoteOn, 3, data);
   }
 
   getMessage(): number[] {
     return [
-      this.type | ((this.params.channel || 1) - 1),
-      this.params.note,
-      this.params.velocity,
+      this.type | ((this.data.channel || 1) - 1),
+      this.data.note,
+      this.data.velocity,
     ];
   }
 }
@@ -86,24 +126,24 @@ export class NoteOn extends Message<NoteParams> {
  * midi_out.sendMessage(new NoteOff({ channel: 3, note: 0x3C, velocity: 0x7F }));
  * ```
  */
-export class NoteOff extends Message<NoteParams> {
-  constructor(params: NoteParams) {
-    super(MessageType.NoteOff, 3, params);
+export class NoteOff extends Message<NoteData> {
+  constructor(data: NoteData) {
+    super(MessageType.NoteOff, 3, data);
   }
 
   getMessage(): number[] {
     return [
-      this.type | ((this.params.channel || 1) - 1),
-      this.params.note,
-      this.params.velocity,
+      this.type | ((this.data.channel || 1) - 1),
+      this.data.note,
+      this.data.velocity,
     ];
   }
 }
 
 /**
- * Control Change params
+ * Control Change data
  */
-interface CCParams {
+interface CCData extends MessageData {
   channel?: number; // Defaults to 1.
   controller: number;
   value: number;
@@ -118,24 +158,24 @@ interface CCParams {
  * ```
  * @see https://www.midi.org/specifications-old/item/table-3-control-change-messages-data-bytes-2
  */
-export class ControlChange extends Message<CCParams> {
-  constructor(params: CCParams) {
-    super(MessageType.ControlChange, 3, params);
+export class ControlChange extends Message<CCData> {
+  constructor(data: CCData) {
+    super(MessageType.ControlChange, 3, data);
   }
 
   getMessage(): number[] {
     return [
-      this.type | ((this.params.channel || 1) - 1),
-      this.params.controller,
-      this.params.value,
+      this.type | ((this.data.channel || 1) - 1),
+      this.data.controller,
+      this.data.value,
     ];
   }
 }
 
 /**
- * Program Change params
+ * Program Change data
  */
-interface PCParams {
+interface PCData extends MessageData {
   channel?: number; // Defaults to 1.
   program: number;
 }
@@ -148,15 +188,15 @@ interface PCParams {
  * midi_out.sendMessage(new ProgramChange({ channel: 3, program: 0x20 }));
  * ```
  */
-export class ProgramChange extends Message<PCParams> {
-  constructor(params: PCParams) {
-    super(MessageType.ProgramChange, 2, params);
+export class ProgramChange extends Message<PCData> {
+  constructor(data: PCData) {
+    super(MessageType.ProgramChange, 2, data);
   }
 
   getMessage(): number[] {
     return [
-      this.type | ((this.params.channel || 1) - 1),
-      this.params.program,
+      this.type | ((this.data.channel || 1) - 1),
+      this.data.program,
     ];
   }
 }

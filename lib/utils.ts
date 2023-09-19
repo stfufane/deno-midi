@@ -1,4 +1,5 @@
 import config from "../deno.json" assert { type: "json" };
+import { Message, MessageData } from "./messages.ts";
 
 /**
  * @returns The path to the RtMidi library according to the OS.
@@ -12,7 +13,7 @@ export function getLibUrl(): string {
  * The deltaTime parameter is optional to avoid unnecessary verbosity when using the callback.
  */
 export interface InputCallbackParams {
-  message: number[];
+  message: Message<MessageData>;
   deltaTime?: number;
 }
 
