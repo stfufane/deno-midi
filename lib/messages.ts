@@ -27,7 +27,7 @@ export enum MessageType {
  * @param message an array of bytes describing the MIDI message
  * @returns the decoded MIDI message.
  */
-export function decodeMessage(message: number[]): Message<MessageData> {
+export function decodeMessage(message: Uint8Array): Message<MessageData> {
   const type = message[0] & 0xF0;
   const channel = (message[0] & 0x0F) + 1;
   switch (type) {

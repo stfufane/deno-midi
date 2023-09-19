@@ -235,10 +235,9 @@ export class Input extends Device {
             messageSize as number,
           ),
         );
-        const msg = Array.from(msg_data);
         callback(
           {
-            message: decodeMessage(msg),
+            message: decodeMessage(msg_data),
             deltaTime: deltaTime,
           },
         );
