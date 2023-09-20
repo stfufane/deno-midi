@@ -43,6 +43,11 @@ export function decodeMessage(message: Uint8Array): Message<MessageData> {
       });
     case MessageType.ProgramChange:
       return new ProgramChange({ channel, program: message[1] });
+    case MessageType.PitchBend:
+      return new PitchBend({
+        channel,
+        value: (message[2] << 7) | message[1],
+      });
     default:
       throw new Error(`Unsupported message type: ${type}`);
   }
@@ -97,6 +102,23 @@ interface NoteData extends MessageData {
 }
 
 /**
+ * Wrapper for both note on and note off MIDI messages, useful to handle both in the same callback.
+ */
+export class Note extends Message<NoteData> {
+  constructor(type: MessageType, data: NoteData) {
+    super(type, 3, data);
+  }
+
+  getMessage(): number[] {
+    return [
+      this.type | ((this.data.channel || 1) - 1),
+      this.data.note,
+      this.data.velocity,
+    ];
+  }
+}
+
+/**
  * NoteOn MIDI message.
  * @example
  * ```ts
@@ -123,7 +145,7 @@ export class NoteOn extends Message<NoteData> {
  * @example
  * ```ts
  * // Send a middle C note off channel 3 with velocity 127.
- * midi_out.sendMessage(new NoteOff({ channel: 3, note: 0x3C, velocity: 0x7F }));
+ * midi_out.sendMessage(new midi.NoteOff({ channel: 3, note: 0x3C, velocity: 0x7F }));
  * ```
  */
 export class NoteOff extends Message<NoteData> {
@@ -154,7 +176,7 @@ interface CCData extends MessageData {
  * @example
  * ```ts
  * // Send a control change message on channel 3 with controller 0x7B and value 0x7F.
- * midi_out.sendMessage(new ControlChange({ channel: 3, controller: 0x7B, value: 0x7F }));
+ * midi_out.sendMessage(new midi.ControlChange({ channel: 3, controller: 0x7B, value: 0x7F }));
  * ```
  * @see https://www.midi.org/specifications-old/item/table-3-control-change-messages-data-bytes-2
  */
@@ -185,7 +207,7 @@ interface PCData extends MessageData {
  * @example
  * ```ts
  * // Send a program change message on channel 3 with program 0x20.
- * midi_out.sendMessage(new ProgramChange({ channel: 3, program: 0x20 }));
+ * midi_out.sendMessage(new midi.ProgramChange({ channel: 3, program: 0x20 }));
  * ```
  */
 export class ProgramChange extends Message<PCData> {
@@ -197,6 +219,40 @@ export class ProgramChange extends Message<PCData> {
     return [
       this.type | ((this.data.channel || 1) - 1),
       this.data.program,
+    ];
+  }
+}
+
+interface PitchBendData extends MessageData {
+  channel?: number; // Defaults to 1.
+  value: number;
+}
+
+// Little helper for pitch bend values.
+export enum PitchBendValue {
+  Min = 0x0000,
+  Center = 0x2000,
+  Max = 0x3FFF,
+}
+
+/**
+ * Pitch Bend MIDI message.
+ * @example
+ * ```ts
+ * // Send a pitch bend message on channel 3 at center value.
+ * midi_out.sendMessage(new midi.PitchBend({ channel: 3, value: midi.PitchBendValue.Center }));
+ * ```
+ */
+export class PitchBend extends Message<PitchBendData> {
+  constructor(data: PitchBendData) {
+    super(MessageType.PitchBend, 3, data);
+  }
+
+  getMessage(): number[] {
+    return [
+      this.type | ((this.data.channel || 1) - 1),
+      this.data.value & 0x7F,
+      (this.data.value >> 7) & 0x7F,
     ];
   }
 }
