@@ -3,13 +3,14 @@
 import { dlopen } from "https://deno.land/x/plug@1.0.2/mod.ts";
 import * as rtmidi_bindings from "./bindings/rtmidi.ts";
 import { RtMidiCCallbackCallbackDefinition } from "./bindings/typeDefinitions.ts";
+import { ErrorHandling, getLibUrl, IgnoreTypeOptions } from "./utils.ts";
+import { decodeMessage, Message, MessageData, RawMessage } from "./messages.ts";
 import {
-  ErrorHandling,
-  getLibUrl,
-  IgnoreTypeOptions,
-  InputCallbackParams,
-} from "./utils.ts";
-import { decodeMessage, Message, MessageData } from "./messages.ts";
+  getMessageEvent,
+  MessageEvent,
+  MessageEventData,
+  MessageHandler,
+} from "./events.ts";
 
 // Export the extra types.
 export * from "./messages.ts";
@@ -39,7 +40,7 @@ export function getVersion(): string {
  */
 abstract class Device {
   protected device: Deno.PointerValue;
-  protected port = -1;
+  protected open_port = false;
   protected readonly port_name: string;
 
   constructor(port_name: string, device_ptr: Deno.PointerValue) {
@@ -135,13 +136,13 @@ abstract class Device {
     if (port >= this.getPortCount()) {
       throw new Error("Invalid port number");
     }
-    this.port = port;
     rtmidi.rtmidi_open_port(
       this.device,
-      this.port,
+      port,
       encoder.encode(this.port_name + "\0"),
     );
     this.checkError();
+    this.open_port = true;
   }
 
   /**
@@ -166,6 +167,7 @@ abstract class Device {
   closePort(): void {
     rtmidi.rtmidi_close_port(this.device);
     this.checkError();
+    this.open_port = false;
   }
 }
 
@@ -179,6 +181,7 @@ export class Input extends Device {
   private callback:
     | Deno.UnsafeCallback<typeof RtMidiCCallbackCallbackDefinition>
     | null = null;
+  private handlers: Map<string, MessageHandler> = new Map();
 
   constructor() {
     const midi_in = rtmidi.rtmidi_in_create_default();
@@ -189,7 +192,98 @@ export class Input extends Device {
    * Free the device pointer.
    */
   freeDevice(): void {
+    // Ensure the port is closed first.
+    if (this.open_port) {
+      this.closePort();
+    }
     rtmidi.rtmidi_in_free(this.device);
+  }
+
+  /**
+   * Open a MIDI connection given on a given port number.
+   * @param port the port number to open (from 0 to get_port_count() - 1)
+   * @throws Error if the port number is invalid.
+   */
+  openPort(port: number): void {
+    super.openPort(port);
+    this.createCallback();
+  }
+
+  /**
+   * Declare the callback for input messages.
+   * @throws Error if the callback could not be created.
+   */
+  private createCallback(): void {
+    this.callback = Deno.UnsafeCallback.threadSafe(
+      RtMidiCCallbackCallbackDefinition,
+      (
+        deltaTime: number,
+        message: Deno.PointerValue<unknown>,
+        messageSize: number | bigint,
+        _userData: Deno.PointerValue<unknown>,
+      ) => {
+        const msg_data = new Uint8Array(
+          new Deno.UnsafePointerView(message!).getArrayBuffer(
+            messageSize as number,
+          ),
+        );
+        // By default, emit the message event.
+        this.emit("message", {
+          message: new RawMessage({ message: Array.from(msg_data) }),
+          deltaTime,
+        });
+        // Then, emit the specific event for the message type.
+        const msg = decodeMessage(msg_data);
+        for (const event of getMessageEvent(msg.type)) {
+          this.emit(event, { message: msg, deltaTime });
+        }
+      },
+    );
+    rtmidi.rtmidi_in_set_callback(this.device, this.callback!.pointer, null);
+    this.checkError();
+  }
+
+  /**
+   * Set a callback to be called when a message is received.
+   * @param event the event to listen to from a list of accepted events
+   * @param handler the callback to be called when the event is emitted
+   * @see MessageEvent
+   * @example
+   * ```ts
+   * midi_in.on("message", ({ message }) => {
+   *  console.log("message callback");
+   *  console.log(message.getType());
+   * });
+   */
+  on(
+    event: MessageEvent,
+    handler: MessageHandler,
+  ): void {
+    this.handlers.set(event, handler);
+  }
+
+  /**
+   * Remove a callback from the list of callbacks.
+   * @param event the event to remove from the list of callbacks
+   * @example
+   * ```ts
+   * midi_in.off("message");
+   */
+  off(event: MessageEvent): void {
+    this.handlers.delete(event);
+  }
+
+  /**
+   * Internal method to emit an event for a given message type.
+   */
+  private emit(
+    event: MessageEvent,
+    data: MessageEventData,
+  ): void {
+    const handler = this.handlers.get(event);
+    if (handler) {
+      handler(data);
+    }
   }
 
   /**
@@ -207,56 +301,16 @@ export class Input extends Device {
   }
 
   /**
-   * Set a callback to be called when a message is received.
-   * The runtime stays alive until off_message is called to remove the callback.
-   * @param callback the function to be called when a message is received.
-   * @example
-   * ```ts
-   * midi_in.onMessage(({ message, deltaTime }) => {
-   *    console.log(message, deltaTime);
-   * });
-   * ```
-   * @throws Error if the callback could not be set.
-   * @see offMessage to remove the callback.
-   */
-  onMessage(
-    callback: (params: InputCallbackParams) => void,
-  ): void {
-    this.callback = Deno.UnsafeCallback.threadSafe(
-      RtMidiCCallbackCallbackDefinition,
-      (
-        deltaTime: number,
-        message: Deno.PointerValue<unknown>,
-        messageSize: number | bigint,
-        _userData: Deno.PointerValue<unknown>,
-      ) => {
-        const msg_data = new Uint8Array(
-          new Deno.UnsafePointerView(message!).getArrayBuffer(
-            messageSize as number,
-          ),
-        );
-        callback(
-          {
-            message: decodeMessage(msg_data),
-            deltaTime: deltaTime,
-          },
-        );
-      },
-    );
-    rtmidi.rtmidi_in_set_callback(this.device, this.callback!.pointer, null);
-    this.checkError();
-  }
-
-  /**
-   * Remove the callback set by on_message.
+   * Remove the callback created when opening the port.
    * @throws Error if the callback could not be removed.
-   * @see onMessage to set the callback.
    */
-  offMessage(): void {
+  closePort(): void {
+    this.handlers.clear(); // Remove all the user callbacks.
     rtmidi.rtmidi_in_cancel_callback(this.device);
     this.callback?.unref();
     this.callback = null;
     this.checkError();
+    super.closePort();
   }
 }
 
@@ -276,6 +330,10 @@ export class Output extends Device {
    * Free the device pointer.
    */
   freeDevice(): void {
+    // Ensure the port is closed first.
+    if (this.open_port) {
+      this.closePort();
+    }
     rtmidi.rtmidi_out_free(this.device);
   }
 

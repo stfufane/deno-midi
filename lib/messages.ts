@@ -77,6 +77,10 @@ export abstract class Message<Data extends MessageData> {
     this.data = data;
   }
 
+  getType(): string {
+    return MessageType[this.type];
+  }
+
   isNoteOn(): boolean {
     return this.type === MessageType.NoteOn;
   }
@@ -90,6 +94,27 @@ export abstract class Message<Data extends MessageData> {
    * @returns the message as an array of bytes.
    */
   abstract getMessage(): number[];
+}
+
+interface RawData extends MessageData {
+  message: number[];
+}
+
+/**
+ * Raw MIDI message.
+ * Used for input callbacks.
+ */
+export class RawMessage extends Message<RawData> {
+  constructor(data: RawData) {
+    if (data.message.length < 1) {
+      throw new Error("Invalid message length");
+    }
+    super(data.message[0] & 0xF0, data.message.length, data);
+  }
+
+  getMessage(): number[] {
+    return this.data.message;
+  }
 }
 
 /**
