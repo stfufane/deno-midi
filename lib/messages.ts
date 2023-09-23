@@ -49,7 +49,8 @@ export function decodeMessage(message: Uint8Array): Message<MessageData> {
         value: (message[2] << 7) | message[1],
       });
     default:
-      throw new Error(`Unsupported message type: ${type}`);
+      // Unsupported formats are returned as raw messages.
+      return new RawMessage({ message: Array.from(message) });
   }
 }
 
