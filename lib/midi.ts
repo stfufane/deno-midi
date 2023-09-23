@@ -4,12 +4,13 @@ import { dlopen } from "https://deno.land/x/plug@1.0.2/mod.ts";
 import * as rtmidi_bindings from "./bindings/rtmidi.ts";
 import { RtMidiCCallbackCallbackDefinition } from "./bindings/typeDefinitions.ts";
 import { ErrorHandling, getLibUrl, IgnoreTypeOptions } from "./utils.ts";
-import { decodeMessage, Message, MessageData, RawMessage } from "./messages.ts";
+import { decodeMessage, Message, MessageData } from "./messages.ts";
 import {
+  EventBus,
   getMessageEvent,
-  MessageEvent,
-  MessageEventData,
-  MessageHandler,
+  MessageEventContract,
+  MessageEventHandler,
+  MessageEvents,
 } from "./events.ts";
 
 // Export the extra types.
@@ -177,11 +178,13 @@ abstract class Device {
  * @extends Device
  * @see Device
  */
-export class Input extends Device {
+export class Input<T extends MessageEventContract<T> = MessageEvents>
+  extends Device
+  implements EventBus<T> {
   private callback:
     | Deno.UnsafeCallback<typeof RtMidiCCallbackCallbackDefinition>
     | null = null;
-  private handlers: Map<string, MessageHandler> = new Map();
+  private event_handlers: Map<string, MessageEventHandler> = new Map();
 
   constructor() {
     const midi_in = rtmidi.rtmidi_in_create_default();
@@ -213,7 +216,7 @@ export class Input extends Device {
    * Declare the callback for input messages.
    * @throws Error if the callback could not be created.
    */
-  private createCallback(): void {
+  private createCallback<EventName extends keyof T>(): void {
     this.callback = Deno.UnsafeCallback.threadSafe(
       RtMidiCCallbackCallbackDefinition,
       (
@@ -227,16 +230,18 @@ export class Input extends Device {
             messageSize as number,
           ),
         );
-        // By default, emit the message event.
-        this.emit("message", {
-          message: new RawMessage({ message: Array.from(msg_data) }),
+        const msg = decodeMessage(msg_data);
+
+        // By default, emit the message event as a generic message
+        this.emit<EventName>("message" as EventName, {
+          message: msg as T[EventName],
           deltaTime,
         });
         // Then, emit the specific event for the message type.
-        const msg = decodeMessage(msg_data);
-        for (const event of getMessageEvent(msg.type)) {
-          this.emit(event, { message: msg, deltaTime });
-        }
+        this.emit<EventName>(getMessageEvent(msg.type) as EventName, {
+          message: msg as T[EventName],
+          deltaTime,
+        });
       },
     );
     rtmidi.rtmidi_in_set_callback(this.device, this.callback!.pointer, null);
@@ -247,19 +252,20 @@ export class Input extends Device {
    * Set a callback to be called when a message is received.
    * @param event the event to listen to from a list of accepted events
    * @param handler the callback to be called when the event is emitted
-   * @see MessageEvent
    * @example
    * ```ts
    * midi_in.on("message", ({ message }) => {
-   *  console.log("message callback");
    *  console.log(message.getType());
    * });
    */
-  on(
-    event: MessageEvent,
-    handler: MessageHandler,
+  on<EventName extends keyof T>(
+    event: EventName,
+    handler: MessageEventHandler<T[EventName]>,
   ): void {
-    this.handlers.set(event, handler);
+    if (this.event_handlers.has(event as string)) {
+      throw new Error("Callback already registered");
+    }
+    this.event_handlers.set(event as string, handler);
   }
 
   /**
@@ -269,18 +275,18 @@ export class Input extends Device {
    * ```ts
    * midi_in.off("message");
    */
-  off(event: MessageEvent): void {
-    this.handlers.delete(event);
+  off<EventName extends keyof T>(event: EventName): void {
+    this.event_handlers.delete(event as string);
   }
 
   /**
    * Internal method to emit an event for a given message type.
    */
-  private emit(
-    event: MessageEvent,
-    data: MessageEventData,
+  emit<EventName extends keyof T>(
+    event: EventName,
+    data: { message: T[EventName]; deltaTime?: number },
   ): void {
-    const handler = this.handlers.get(event);
+    const handler = this.event_handlers.get(event as string);
     if (handler) {
       handler(data);
     }
@@ -305,7 +311,7 @@ export class Input extends Device {
    * @throws Error if the callback could not be removed.
    */
   closePort(): void {
-    this.handlers.clear(); // Remove all the user callbacks.
+    this.event_handlers.clear(); // Remove all the user callbacks.
     rtmidi.rtmidi_in_cancel_callback(this.device);
     this.callback?.unref();
     this.callback = null;
