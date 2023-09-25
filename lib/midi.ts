@@ -147,6 +147,35 @@ abstract class Device {
   }
 
   /**
+   * Open a MIDI connection given on a given port name.
+   * @param port the port name to open
+   * @throws Error if the port name is invalid.
+   * @example
+   * ```ts
+   * midi_in.openPortByName("My Midi Port");
+   * ```
+   */
+  openPortByName(port: string): void {
+    const ports = this.getPorts();
+    // On windows, ports are named "port_name port_number" so we need to parse the port name.
+    if (Deno.build.os == "windows") {
+      for (let i = 0; i < ports.length; i++) {
+        if (ports[i] == (port + " " + i)) {
+          this.openPort(i);
+          return;
+        }
+      }
+      throw new Error("Invalid port name");
+    } else {
+      const port_index = ports.indexOf(port);
+      if (port_index == -1) {
+        throw new Error("Invalid port name");
+      }
+      this.openPort(port_index);
+    }
+  }
+
+  /**
    * Opens a virtual MIDI port to allow software to software connections.
    * @summary This method is not supported on Windows.
    */
