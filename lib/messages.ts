@@ -28,6 +28,9 @@ export enum MessageType {
  * @returns the decoded MIDI message.
  */
 export function decodeMessage(message: Uint8Array): Message<MessageData> {
+  if (message.length < 1) {
+    throw new Error("Invalid message length");
+  }
   const type = message[0] & 0xF0;
   const channel = (message[0] & 0x0F) + 1;
   switch (type) {

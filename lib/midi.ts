@@ -238,10 +238,13 @@ export class Input<T extends MessageEventContract<T> = MessageEvents>
           deltaTime,
         });
         // Then, emit the specific event for the message type.
-        this.emit<EventName>(getMessageEvent(msg.type) as EventName, {
-          message: msg as T[EventName],
-          deltaTime,
-        });
+        const event_type = getMessageEvent(msg.type);
+        if (event_type != "message") {
+          this.emit<EventName>(event_type as EventName, {
+            message: msg as T[EventName],
+            deltaTime,
+          });
+        }
       },
     );
     rtmidi.rtmidi_in_set_callback(this.device, this.callback!.pointer, null);
